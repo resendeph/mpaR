@@ -47,22 +47,43 @@ test_that("SPC values are correct on simple DAG", {
 })
 
 
-test_that("SPLC is >= SPC (each path contributes its full length)", {
-  g    <- make_simple_dag()
-  splc <- igraph::E(g)$SPLC
-  spc  <- igraph::E(g)$SPC
-  # SPLC >= SPC * (min path length through that edge)
-  # Both paths have length 3; edge 1->2 has SPLC = 2*3 = 6, SPC = 2
-  el        <- igraph::as_edgelist(g, names = TRUE)
+test_that("SPLC values are correct on simple DAG", {
+  # SPLC(i->j) = fa[i] * b[j]
+  # fa: fa[1]=1, fa[2]=2, fa[3]=3, fa[4]=3, fa[5]=7
+  # b:  b[1]=2,  b[2]=2,  b[3]=1,  b[4]=1,  b[5]=1
+  g          <- make_simple_dag()
+  el         <- igraph::as_edgelist(g, names = TRUE)
   edge_names <- paste0(el[, 1], "->", el[, 2])
-  splc_named <- setNames(splc, edge_names)
-  expect_equal(splc_named["1->2"], 6, tolerance = 1e-9)
+  splc_named <- setNames(igraph::E(g)$SPLC, edge_names)
+
+  expect_equal(splc_named["1->2"], 1 * 2, tolerance = 1e-9)  # fa[1]*b[2] = 1*2 = 2
+  expect_equal(splc_named["2->3"], 2 * 1, tolerance = 1e-9)  # fa[2]*b[3] = 2*1 = 2
+  expect_equal(splc_named["2->4"], 2 * 1, tolerance = 1e-9)  # fa[2]*b[4] = 2*1 = 2
+  expect_equal(splc_named["3->5"], 3 * 1, tolerance = 1e-9)  # fa[3]*b[5] = 3*1 = 3
+  expect_equal(splc_named["4->5"], 3 * 1, tolerance = 1e-9)  # fa[4]*b[5] = 3*1 = 3
 })
 
 
-test_that("SPNP >= SPLC for all edges (node pairs >= link count)", {
-  g    <- make_simple_dag()
+test_that("SPNP values are correct on simple DAG", {
+  # SPNP(i->j) = fa[i] * ba[j]
+  # fa: fa[1]=1, fa[2]=2, fa[3]=3, fa[4]=3
+  # ba: ba[1]=6, ba[2]=5, ba[3]=2, ba[4]=2, ba[5]=1
+  g          <- make_simple_dag()
+  el         <- igraph::as_edgelist(g, names = TRUE)
+  edge_names <- paste0(el[, 1], "->", el[, 2])
+  spnp_named <- setNames(igraph::E(g)$SPNP, edge_names)
+
+  expect_equal(spnp_named["1->2"], 1 * 5, tolerance = 1e-9)  # fa[1]*ba[2] = 1*5 = 5
+  expect_equal(spnp_named["2->3"], 2 * 2, tolerance = 1e-9)  # fa[2]*ba[3] = 2*2 = 4
+  expect_equal(spnp_named["2->4"], 2 * 2, tolerance = 1e-9)  # fa[2]*ba[4] = 2*2 = 4
+  expect_equal(spnp_named["3->5"], 3 * 1, tolerance = 1e-9)  # fa[3]*ba[5] = 3*1 = 3
+  expect_equal(spnp_named["4->5"], 3 * 1, tolerance = 1e-9)  # fa[4]*ba[5] = 3*1 = 3
+})
+
+test_that("SPNP >= SPLC >= SPC for all edges", {
+  g <- make_simple_dag()
   expect_true(all(igraph::E(g)$SPNP >= igraph::E(g)$SPLC - 1e-9))
+  expect_true(all(igraph::E(g)$SPLC >= igraph::E(g)$SPC  - 1e-9))
 })
 
 
