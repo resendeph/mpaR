@@ -93,7 +93,8 @@ check_scale_free <- function(x,
   KS_stat      <- .s(fit, "KS.stat")
   KS_p         <- .s(fit, "KS.p")
 
-  is_scale_free <- !is.na(KS_p) && KS_p > 0.05 && alpha >= 2 && alpha <= 5
+  is_scale_free <- isTRUE(!is.na(KS_p) && KS_p > 0.05) &&
+                   isTRUE(!is.na(alpha) && alpha >= 2 && alpha <= 5)
 
   # ── Console summary ───────────────────────────────────────────────────────
   verdict <- if (is_scale_free) "CONSISTENT with scale-free" else
@@ -148,7 +149,7 @@ check_scale_free <- function(x,
   graphics::lines(k_fit, ccdf_fit, col = "#E63946", lwd = 2)
   graphics::legend(
     "topright",
-    legend = sprintf("γ = %.3f", alpha),
+    legend = sprintf("gamma = %.3f", alpha),
     col    = "#E63946",
     lwd    = 2,
     bty    = "n"

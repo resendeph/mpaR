@@ -105,7 +105,7 @@ read_pajek <- function(file,
     tokens <- tokens[nchar(tokens) > 0L]
     id     <- as.integer(tokens[1L])
 
-    vnames[id] <- if (!is.na(label)) label else as.character(id)
+    vnames[id] <- if (!is.na(label) && label != "null") label else as.character(id)
 
     if (length(tokens) >= 4L) {
       vx[id] <- suppressWarnings(as.numeric(tokens[2L]))
