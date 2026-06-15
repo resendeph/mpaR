@@ -224,8 +224,4 @@ read_pajek <- function(file,
     "Parsed Pajek file: %d vertices, %d edges (%s)",
     igraph::vcount(g),
     igraph::ecount(g),
-    if (directed) "directed" else "undirected"
-  ))
-
-  g
-}
+    if (directed) "directed" else "undir

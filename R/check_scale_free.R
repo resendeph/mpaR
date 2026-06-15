@@ -154,5 +154,4 @@ check_scale_free <- function(x,
     lwd    = 2,
     bty    = "n"
   )
-  graphics::abline(v = xmin, lty = 2, col = "#AAAAAA")
-}
+  
