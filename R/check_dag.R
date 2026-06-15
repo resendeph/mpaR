@@ -1,34 +1,29 @@
-#' Check and optionally enforce DAG structure
+#' Check DAG structure
 #'
 #' @description
-#' Validates that a graph is a directed acyclic graph (DAG). If cycles are
-#' present, the function reports which edges create them and — optionally —
-#' removes those back-edges to produce a valid DAG.
+#' Validates that a directed graph is a directed acyclic graph (DAG). If cycles
+#' are present, the function identifies the back-edges responsible and reports
+#' them so the user can correct the underlying network data.
 #'
-#' In citation networks cycles can arise from data-entry errors, self-citations,
-#' or mutual-citation pairs. This function helps you detect and clean such
-#' issues before running [traversal_weights()] or [mpa()].
+#' Cycles in citation or patent networks typically indicate data-entry errors,
+#' self-citations, or mutual-citation pairs. Because silently dropping edges
+#' would distort the network topology, \code{check_dag()} never modifies the
+#' graph — it is the user's responsibility to review and correct the source
+#' data before proceeding.
 #'
 #' @param x An \code{igraph} object or a data frame / matrix with edge-list
 #'   columns (\code{from}, \code{to}).
-#' @param fix Logical. If \code{TRUE}, remove the minimum set of back-edges
-#'   (determined by DFS) needed to make the graph a DAG and return the cleaned
-#'   graph. If \code{FALSE} (default), only report whether the graph is a DAG.
 #' @param verbose Logical. If \code{TRUE} (default), print a summary of the
 #'   check result to the console.
 #'
-#' @return
-#' If \code{fix = FALSE}: a list with elements
+#' @return A list with elements:
 #' \describe{
-#'   \item{\code{is_dag}}{Logical; \code{TRUE} if the graph is already a DAG.}
+#'   \item{\code{is_dag}}{Logical; \code{TRUE} if the graph is a valid DAG.}
 #'   \item{\code{cycle_edges}}{A data frame with columns \code{from} and
 #'     \code{to} listing the back-edges that create cycles, or \code{NULL} if
 #'     the graph is a DAG.}
 #'   \item{\code{n_cycle_edges}}{Integer; number of cycle-creating edges.}
 #' }
-#'
-#' If \code{fix = TRUE}: the cleaned \code{igraph} DAG (back-edges removed),
-#' with the check result attached as attribute \code{"dag_check"}.
 #'
 #' @examples
 #' library(igraph)
@@ -43,17 +38,13 @@
 #'   to   = c(2, 3, 1, 4)
 #' )
 #' result <- check_dag(el_cycle)
-#' result$is_dag          # FALSE
-#' result$cycle_edges     # the offending edge(s)
-#'
-#' # Auto-fix: remove back-edges and return a valid DAG
-#' g_fixed <- check_dag(el_cycle, fix = TRUE)
-#' igraph::is_dag(g_fixed) # TRUE
+#' result$is_dag       # FALSE
+#' result$cycle_edges  # the offending edge(s) — fix these in your source data
 #'
 #' @export
-check_dag <- function(x, fix = FALSE, verbose = TRUE) {
+check_dag <- function(x, verbose = TRUE) {
 
-  # Coerce to igraph (bypassing the DAG check in .to_dag)
+  # Coerce to igraph
   if (inherits(x, "igraph")) {
     g <- x
   } else if (is.data.frame(x) || is.matrix(x)) {
@@ -73,52 +64,31 @@ check_dag <- function(x, fix = FALSE, verbose = TRUE) {
   if (igraph::is_dag(g)) {
     result <- list(is_dag = TRUE, cycle_edges = NULL, n_cycle_edges = 0L)
     if (verbose) message("✓ The graph is a valid DAG (no cycles detected).")
-    if (fix) {
-      attr(g, "dag_check") <- result
-      return(g)
-    }
     return(result)
   }
 
   # ── Detect back-edges via DFS ──────────────────────────────────────────────
   back_edges <- .find_back_edges(g)
 
-  el       <- igraph::as_edgelist(g, names = TRUE)
-  back_df  <- data.frame(
+  el      <- igraph::as_edgelist(g, names = TRUE)
+  back_df <- data.frame(
     from = el[back_edges, 1L],
     to   = el[back_edges, 2L],
-    edge_id = back_edges,
     stringsAsFactors = FALSE
   )
 
   result <- list(
     is_dag        = FALSE,
-    cycle_edges   = back_df[, c("from", "to")],
+    cycle_edges   = back_df,
     n_cycle_edges = nrow(back_df)
   )
 
   if (verbose) {
     message(sprintf(
-      "✗ The graph contains %d cycle-creating edge(s):\n%s",
+      "✗ The graph contains %d cycle-creating edge(s):\n%s\n  Please correct these in your source data before proceeding.",
       nrow(back_df),
       paste0("  ", back_df$from, " -> ", back_df$to, collapse = "\n")
     ))
-    if (!fix) {
-      message("  Run check_dag(x, fix = TRUE) to remove them automatically.")
-    }
-  }
-
-  # ── Optionally fix ─────────────────────────────────────────────────────────
-  if (fix) {
-    g_fixed <- igraph::delete_edges(g, back_edges)
-    if (verbose) {
-      message(sprintf(
-        "✓ Removed %d back-edge(s). The graph is now a valid DAG.",
-        nrow(back_df)
-      ))
-    }
-    attr(g_fixed, "dag_check") <- result
-    return(g_fixed)
   }
 
   result
