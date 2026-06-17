@@ -21,7 +21,7 @@
 #' @references
 #' Hummon, N. P., & Doreian, P. (1989). Connectivity in a citation network:
 #' The development of DNA theory. *Social Networks*, **11**(1), 39–63.
-#' \doi{10.1016/0378-8733(89)90017-3}
+#' \doi{10.1016/0378-8733(89)90017-8}
 #'
 #' @examples
 #' library(igraph)
@@ -89,7 +89,7 @@ edge_weights <- function(x, method = "all") {
 #' @references
 #' Hummon, N. P., & Doreian, P. (1989). Connectivity in a citation network:
 #' The development of DNA theory. *Social Networks*, **11**(1), 39–63.
-#' \doi{10.1016/0378-8733(89)90017-3}
+#' \doi{10.1016/0378-8733(89)90017-8}
 #'
 #' @examples
 #' library(igraph)
