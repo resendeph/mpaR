@@ -61,7 +61,7 @@ igraph::E(g_w)$SPC
 \references{
 Hummon, N. P., & Doreian, P. (1989). Connectivity in a citation network:
 The development of DNA theory. \emph{Social Networks}, \strong{11}(1), 39–63.
-\doi{10.1016/0378-8733(89)90017-3}
+\doi{10.1016/0378-8733(89)90017-8}
 
 Batagelj, V. (2003). Efficient algorithms for citation network analysis.
 \emph{arXiv preprint} cs/0309023.

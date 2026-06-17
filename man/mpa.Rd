@@ -81,7 +81,7 @@ data.frame(threshold = thresholds, nodes = sizes)
 \references{
 Hummon, N. P., & Doreian, P. (1989). Connectivity in a citation network:
 The development of DNA theory. \emph{Social Networks}, \strong{11}(1), 39–63.
-\doi{10.1016/0378-8733(89)90017-3}
+\doi{10.1016/0378-8733(89)90017-8}
 }
 \seealso{
 \code{\link[=main_path]{main_path()}} for the lower-level function and full parameter

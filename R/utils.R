@@ -1,4 +1,3 @@
-#' @keywords internal
 #' Convert input to an igraph DAG, attaching a standardised vertex name attribute.
 #'
 #' Accepts either an \pkg{igraph} graph object or a data frame with at least two
@@ -9,6 +8,7 @@
 #' @param directed Logical; force directed graph when coercing from data frame.
 #' @return A directed \code{igraph} object whose vertices carry a
 #'   \code{"name"} attribute.
+#' @keywords internal
 #' @noRd
 .to_dag <- function(x, directed = TRUE) {
   if (inherits(x, "igraph")) {
@@ -47,17 +47,17 @@
 }
 
 
-#' @keywords internal
 #' Return a topological ordering of vertex indices (1-based).
+#' @keywords internal
 #' @noRd
 .topo_order <- function(g) {
   igraph::topo_sort(g, mode = "out")
 }
 
 
-#' @keywords internal
 #' Identify source vertices (in-degree 0) and sink vertices (out-degree 0).
 #' Returns a list with integer vectors \code{sources} and \code{sinks}.
+#' @keywords internal
 #' @noRd
 .sources_sinks <- function(g) {
   indeg  <- igraph::degree(g, mode = "in")

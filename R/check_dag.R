@@ -97,9 +97,9 @@ check_dag <- function(x, verbose = TRUE) {
 
 # ── Internal: DFS-based back-edge detection ──────────────────────────────────
 
-#' @noRd
 #' Identify back-edges (edges that point to an ancestor in the DFS tree).
 #' Returns integer vector of edge IDs.
+#' @noRd
 .find_back_edges <- function(g) {
   n        <- igraph::vcount(g)
   el       <- igraph::as_edgelist(g, names = FALSE)

@@ -4,7 +4,7 @@
 \name{mpaR-package}
 \alias{mpaR}
 \alias{mpaR-package}
-\title{mpaR: Main Path Analysis for Citation and Directed Networks}
+\title{Package-level documentation}
 \description{
 Implements Main Path Analysis (MPA) as introduced by Hummon and Doreian (1989) \doi{10.1016/0378-8733(89)90017-8}. Given a directed acyclic graph (DAG) representing a citation or precedence network, the package computes traversal weights (SPC, SPLC, SPNP) for each edge and extracts the global, local, and key-route main paths. Also provides tools for DAG validation, node role classification (source/terminal/user), per-component path extraction for disconnected networks, and scale-free network testing. Accepts igraph objects or edge-list data frames as input. Includes readers for Pajek (.net) and Gephi export (.gexf, .graphml) files.
 }
@@ -25,6 +25,4 @@ Authors:
 }
 
 }
-\keyword{Package-level}
-\keyword{documentation}
 \keyword{internal}

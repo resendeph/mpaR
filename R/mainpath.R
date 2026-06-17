@@ -63,7 +63,7 @@
 #' @references
 #' Hummon, N. P., & Doreian, P. (1989). Connectivity in a citation network:
 #' The development of DNA theory. *Social Networks*, **11**(1), 39–63.
-#' \doi{10.1016/0378-8733(89)90017-3}
+#' \doi{10.1016/0378-8733(89)90017-8}
 #'
 #' Garfield, E., Pudovkin, A. I., & Istomin, V. S. (2003). Why do we need
 #' algorithmic historiography? *Journal of the American Society for Information
@@ -177,9 +177,9 @@ main_path <- function(g, type = c("global", "local", "key_route"),
 
 
 
-#' @noRd
 #' Greedy forward BFS from every source; at each node includes all outgoing
 #' edges with weight >= threshold * max_outgoing_weight.
+#' @noRd
 .local_main_path <- function(g, w, threshold = 1.0) {
   ss     <- .sources_sinks(g)
   el     <- igraph::as_edgelist(g, names = FALSE)
@@ -211,10 +211,10 @@ main_path <- function(g, type = c("global", "local", "key_route"),
 
 
 
-#' @noRd
 #' Proper backward trace that also tracks the vertex.
 #' prev_e: integer vector, prev_e[v] = edge id leading to v (0 = source)
 #' from_v: integer vector mapping edge id -> from vertex
+#' @noRd
 .trace_path <- function(prev_e, v, from_v = NULL) {
   if (is.null(from_v)) {
     # Reconstruct from_v is unavailable — caller must supply it.
