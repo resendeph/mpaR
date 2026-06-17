@@ -1,7 +1,7 @@
 Package: mpaR
 Title: Main Path Analysis for Citation and Directed Networks
 Version: 0.3.0
-Authors@R: person("Paulo", "Resende", email = "phresende14@gmail.com",
+Authors@R: person("Paulo H", "Resende", email = "paulo.resende@ttu.edu",
     role = c("aut", "cre"))
 Description: Implements Main Path Analysis (MPA) as introduced by Hummon and
     Doreian (1989) <doi:10.1016/0378-8733(89)90017-3>. Given a directed acyclic
