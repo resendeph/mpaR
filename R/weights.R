@@ -63,46 +63,13 @@ traversal_weights <- function(x, method = "all") {
   if ("ALL" %in% method) method <- c("SPC", "SPLC", "SPNP")
   method <- match.arg(method, c("SPC", "SPLC", "SPNP"), several.ok = TRUE)
 
-  n   <- igraph::vcount(g)
-  ord <- as.integer(.topo_order(g))   # topological order (vertex indices)
-  ss  <- .sources_sinks(g)
-
-  # ------------------------------------------------------------------
-  # Forward pass
-  #   f[v]  = # paths from any global source to v          (used by SPC)
-  #   fa[v] = 1 + sum(fa[u] for u -> v)                   (used by SPLC, SPNP)
-  #           counts paths from any ancestor to v, including the trivial
-  #           zero-length path from v to itself
-  # ------------------------------------------------------------------
-  f  <- numeric(n)
-  fa <- numeric(n)
-
-  f[ss$sources] <- 1.0
-
-  for (v in ord) {
-    preds <- as.integer(igraph::neighbors(g, v, mode = "in"))
-    fa[v] <- 1.0 + sum(fa[preds])          # always: trivial path + ancestor paths
-    if (length(preds) == 0L) next          # source: f already initialised
-    f[v]  <- sum(f[preds])
-  }
-
-  # ------------------------------------------------------------------
-  # Backward pass
-  #   b[v]  = # paths from v to any global sink            (used by SPC, SPLC)
-  #   ba[v] = 1 + sum(ba[w] for v -> w)                   (used by SPNP)
-  #           counts paths from v to any descendant, including v itself
-  # ------------------------------------------------------------------
-  b  <- numeric(n)
-  ba <- numeric(n)
-
-  b[ss$sinks] <- 1.0
-
-  for (v in rev(ord)) {
-    succs <- as.integer(igraph::neighbors(g, v, mode = "out"))
-    ba[v] <- 1.0 + sum(ba[succs])          # always: trivial path + descendant paths
-    if (length(succs) == 0L) next          # sink: b already initialised
-    b[v]  <- sum(b[succs])
-  }
+  # Shared forward/backward path-count vectors (see .path_counts() for the
+  # definitions of f, fa, b, ba). Also used by edge_weights() / node_weights().
+  pc <- .path_counts(g)
+  f  <- pc$f
+  fa <- pc$fa
+  b  <- pc$b
+  ba <- pc$ba
 
   # ------------------------------------------------------------------
   # Edge scores

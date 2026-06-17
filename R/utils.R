@@ -67,3 +67,49 @@
     sinks   = which(outdeg == 0L)
   )
 }
+
+
+#' @keywords internal
+#' Compute the forward/backward path-count vectors shared by
+#' [traversal_weights()], [edge_weights()], and [node_weights()].
+#'
+#' \code{f[v]}  = # paths from any global source to \code{v}.
+#' \code{fa[v]} = 1 + sum(fa[u] for u -> v); paths from any ancestor of
+#'   \code{v} (including \code{v} itself).
+#' \code{b[v]}  = # paths from \code{v} to any global sink.
+#' \code{ba[v]} = 1 + sum(ba[w] for v -> w); paths from \code{v} to any
+#'   descendant (including \code{v} itself).
+#'
+#' @param g An \code{igraph} DAG (already validated by \code{.to_dag()}).
+#' @return A list with numeric vectors \code{f}, \code{fa}, \code{b}, \code{ba},
+#'   each indexed by vertex id.
+#' @noRd
+.path_counts <- function(g) {
+  n   <- igraph::vcount(g)
+  ord <- as.integer(.topo_order(g))
+  ss  <- .sources_sinks(g)
+
+  f  <- numeric(n)
+  fa <- numeric(n)
+  f[ss$sources] <- 1.0
+
+  for (v in ord) {
+    preds <- as.integer(igraph::neighbors(g, v, mode = "in"))
+    fa[v] <- 1.0 + sum(fa[preds])
+    if (length(preds) == 0L) next
+    f[v]  <- sum(f[preds])
+  }
+
+  b  <- numeric(n)
+  ba <- numeric(n)
+  b[ss$sinks] <- 1.0
+
+  for (v in rev(ord)) {
+    succs <- as.integer(igraph::neighbors(g, v, mode = "out"))
+    ba[v] <- 1.0 + sum(ba[succs])
+    if (length(succs) == 0L) next
+    b[v]  <- sum(b[succs])
+  }
+
+  list(f = f, fa = fa, b = b, ba = ba)
+}
