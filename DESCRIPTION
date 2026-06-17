@@ -1,5 +1,5 @@
 Package: mpaR
-Title: Main Path Analysis for Citation and Directed Networks
+Title: Main Path Analysis for Directed Networks
 Version: 0.3.0
 Authors@R: person("Paulo H", "Resende", email = "paulo.resende@ttu.edu",
     role = c("aut", "cre"))
