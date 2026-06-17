@@ -112,7 +112,7 @@ test_that("error on missing file", {
 })
 
 test_that("sample_network_pajek.net loads without error", {
-  net_file <- system.file("extdata", "sample_network_pajek.net", package = "mpa")
+  net_file <- system.file("extdata", "sample_network_pajek.net", package = "mpaR")
   skip_if(net_file == "", "sample file not installed")
   g <- read_pajek(net_file)
   expect_equal(igraph::vcount(g), 50L)

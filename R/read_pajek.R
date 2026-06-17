@@ -33,7 +33,7 @@
 #'
 #' @examples
 #' net_file <- system.file("extdata", "sample_network_pajek.net",
-#'                         package = "mpa")
+#'                         package = "mpaR")
 #' g <- read_pajek(net_file)
 #' igraph::vcount(g)
 #' igraph::ecount(g)
