@@ -3,12 +3,11 @@
 #' @description
 #' Validates that a directed graph is a directed acyclic graph (DAG). If cycles
 #' are present, the function identifies the back-edges responsible and reports
-#' them so the user can correct the underlying network data.
+#' them so the user can correct the underlying network data. 
 #'
 #' Cycles in citation or patent networks typically indicate data-entry errors,
 #' self-citations, or mutual-citation pairs. Because silently dropping edges
-#' would distort the network topology, \code{check_dag()} never modifies the
-#' graph — it is the user's responsibility to review and correct the source
+#' would distort the network topology, it is necessary to review and correct the source
 #' data before proceeding.
 #'
 #' @param x An \code{igraph} object or a data frame / matrix with edge-list
@@ -63,7 +62,7 @@ check_dag <- function(x, verbose = TRUE) {
   # ── Fast path: already a DAG ───────────────────────────────────────────────
   if (igraph::is_dag(g)) {
     result <- list(is_dag = TRUE, cycle_edges = NULL, n_cycle_edges = 0L)
-    if (verbose) message("✓ The graph is a valid DAG (no cycles detected).")
+    if (verbose) message("The graph is a valid DAG (no cycles detected).")
     return(result)
   }
 
@@ -85,7 +84,7 @@ check_dag <- function(x, verbose = TRUE) {
 
   if (verbose) {
     message(sprintf(
-      "✗ The graph contains %d cycle-creating edge(s):\n%s\n  Please correct these in your source data before proceeding.",
+      "The graph contains %d cycle-creating edge(s):\n%s\n  Please correct these in your source data before proceeding.",
       nrow(back_df),
       paste0("  ", back_df$from, " -> ", back_df$to, collapse = "\n")
     ))

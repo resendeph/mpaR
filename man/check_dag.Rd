@@ -30,8 +30,7 @@ them so the user can correct the underlying network data.
 
 Cycles in citation or patent networks typically indicate data-entry errors,
 self-citations, or mutual-citation pairs. Because silently dropping edges
-would distort the network topology, \code{check_dag()} never modifies the
-graph — it is the user's responsibility to review and correct the source
+would distort the network topology, it is necessary to review and correct the source
 data before proceeding.
 }
 \examples{

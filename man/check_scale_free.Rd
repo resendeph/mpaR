@@ -34,11 +34,11 @@ and \eqn{2 \leq \gamma \leq 5}.}
 }
 }
 \description{
-Fits a discrete power-law distribution to the degree sequence of the graph
+Fits a discrete power-law distribution to the degree sequence of the graph object
 and reports whether the data are consistent with scale-free behaviour.
 Scale-free networks are characterised by a degree distribution that follows
 \eqn{P(k) \propto k^{-\gamma}}, where \eqn{\gamma} typically lies between
-2 and 3 for empirical citation networks.
+2 and 3 for empirical citation networks (this is used as a criterion for power-law, but the interpretation can be flexible).
 
 The function uses \code{\link[igraph:fit_power_law]{igraph::fit_power_law()}} (a maximum-likelihood estimator)
 and optionally produces a log-log plot of the complementary cumulative

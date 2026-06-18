@@ -35,6 +35,7 @@
 #' g <- read_gephi_export("my_project.graphml")
 #' }
 #'
+#' @importFrom stats setNames
 #' @export
 read_gephi_export <- function(file, directed = NULL) {
 

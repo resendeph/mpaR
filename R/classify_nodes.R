@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Labels every vertex in a directed graph as one of four roles based on its
-#' in-degree and out-degree:
+#' in-degree and out-degree. There are two main nomenclatures:
 #'
 #' \strong{Citation-network convention} (default, \code{convention = "citation"}):
 #' \describe{
@@ -29,8 +29,8 @@
 #' \itemize{
 #'   \item In a patent citation network, edge direction is
 #'     \eqn{A \to B} meaning "A cites B". The oldest, foundational patent B
-#'     accumulates in-citations but cites nothing — it is the \emph{source} of
-#'     the knowledge flow, hence called \code{"source"} in the citation
+#'     accumulates in-citations but cites nothing, since it is the \emph{source} of
+#'     the knowledge flow, or the preceding node (timewise) , hence called \code{"source"} in the citation
 #'     convention even though it is a \emph{sink} in graph-theory terms.
 #'   \item Use \code{convention = "graph"} if you are working with a DAG where
 #'     edge direction represents precedence or causality rather than citation.
@@ -73,6 +73,7 @@
 #' # As a named vector
 #' classify_nodes(el, as_data_frame = FALSE)
 #'
+#' @importFrom stats setNames
 #' @export
 classify_nodes <- function(x,
                            convention    = c("citation", "graph"),

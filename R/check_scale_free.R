@@ -1,11 +1,11 @@
 #' Test whether a network has a scale-free degree distribution
 #'
 #' @description
-#' Fits a discrete power-law distribution to the degree sequence of the graph
+#' Fits a discrete power-law distribution to the degree sequence of the graph object
 #' and reports whether the data are consistent with scale-free behaviour.
 #' Scale-free networks are characterised by a degree distribution that follows
 #' \eqn{P(k) \propto k^{-\gamma}}, where \eqn{\gamma} typically lies between
-#' 2 and 3 for empirical citation networks.
+#' 2 and 3 for empirical citation networks (this is used as a criterion for power-law, but the interpretation can be flexible).
 #'
 #' The function uses [igraph::fit_power_law()] (a maximum-likelihood estimator)
 #' and optionally produces a log-log plot of the complementary cumulative
@@ -53,6 +53,7 @@
 #' g_er <- igraph::sample_gnp(500, p = 0.02)
 #' check_scale_free(g_er, plot = FALSE)
 #'
+#' @importFrom methods slot
 #' @export
 check_scale_free <- function(x,
                              mode  = c("all", "in", "out"),
@@ -142,8 +143,8 @@ check_scale_free <- function(x,
     pch  = 16,
     col  = "#555555",
     xlab = paste0("Degree (", mode_label, ")"),
-    ylab = "P(K ≥ k)  [CCDF]",
-    main = "Degree Distribution — Power-law fit",
+    ylab = "P(K >= k)  [CCDF]",
+    main = "Degree Distribution - Power-law fit",
     cex  = 0.7
   )
   graphics::lines(k_fit, ccdf_fit, col = "#E63946", lwd = 2)
