@@ -1,0 +1,5 @@
+^\.github$
+^cran-comments\.md$
+^\.Rhistory$
+^\.gitignore$
+^CRAN-SUBMISSION$
