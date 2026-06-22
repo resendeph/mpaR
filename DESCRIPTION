@@ -10,8 +10,8 @@ Description: Implements Main Path Analysis (MPA) as introduced by Hummon and
     the global, local, and key-route main paths. Also provides tools for DAG
     validation, node role classification (source/terminal/user), per-component
     path extraction for disconnected networks, and scale-free network testing.
-    Accepts igraph objects or edge-list data frames as input. Includes
-    readers for Pajek (.net) and Gephi export (.gexf, .graphml) files.
+    Accepts 'igraph' objects or edge-list data frames as input. Includes
+    readers for 'Pajek' (.net) and 'Gephi' export (.gexf, .graphml) files.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
