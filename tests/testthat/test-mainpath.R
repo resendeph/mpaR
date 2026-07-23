@@ -104,3 +104,4 @@ test_that("all three weight methods produce a valid global path", {
                 label = paste("vcount >= 2 for weight", w))
   }
 })
+

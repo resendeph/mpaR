@@ -1,1 +1,7 @@
-inst/extdata/semaglutide.gexf 
+inst/extdata/semaglutide.gexf
+.Rhistory
+.RData
+.Rproj.user
+revdep/
+*.tar.gz
+*.Rcheck/

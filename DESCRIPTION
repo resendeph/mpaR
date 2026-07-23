@@ -1,6 +1,6 @@
 Package: mpaR
 Title: Main Path Analysis for Citation and Directed Networks
-Version: 0.4.0
+Version: 0.5.0
 Authors@R: person("Paulo H", "Resende", email = "paulo.resende@ttu.edu",
     role = c("aut", "cre"))
 Description: Implements Main Path Analysis (MPA) as introduced by Hummon and
@@ -23,6 +23,7 @@ Imports:
     tools,
     xml2
 Suggests:
+    openalexR (>= 2.0.0),
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 URL: https://github.com/resendeph/mpaR

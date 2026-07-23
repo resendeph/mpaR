@@ -37,13 +37,14 @@ test_that("SPC values are correct on simple DAG", {
   spc_named  <- setNames(spc, edge_names)
 
   # Both paths pass through edge 1->2:  SPC = 2
-  expect_equal(spc_named["1->2"], 2, tolerance = 1e-9)
+  # (use [[ ]] so the name attribute is dropped and only the value is compared)
+  expect_equal(spc_named[["1->2"]], 2, tolerance = 1e-9)
   # Only one path through 3->5 and one through 4->5: SPC = 1 each
-  expect_equal(spc_named["3->5"], 1, tolerance = 1e-9)
-  expect_equal(spc_named["4->5"], 1, tolerance = 1e-9)
+  expect_equal(spc_named[["3->5"]], 1, tolerance = 1e-9)
+  expect_equal(spc_named[["4->5"]], 1, tolerance = 1e-9)
   # Edges 2->3 and 2->4 each carry one path: SPC = 1
-  expect_equal(spc_named["2->3"], 1, tolerance = 1e-9)
-  expect_equal(spc_named["2->4"], 1, tolerance = 1e-9)
+  expect_equal(spc_named[["2->3"]], 1, tolerance = 1e-9)
+  expect_equal(spc_named[["2->4"]], 1, tolerance = 1e-9)
 })
 
 
@@ -56,11 +57,11 @@ test_that("SPLC values are correct on simple DAG", {
   edge_names <- paste0(el[, 1], "->", el[, 2])
   splc_named <- setNames(igraph::E(g)$SPLC, edge_names)
 
-  expect_equal(splc_named["1->2"], 1 * 2, tolerance = 1e-9)  # fa[1]*b[2] = 1*2 = 2
-  expect_equal(splc_named["2->3"], 2 * 1, tolerance = 1e-9)  # fa[2]*b[3] = 2*1 = 2
-  expect_equal(splc_named["2->4"], 2 * 1, tolerance = 1e-9)  # fa[2]*b[4] = 2*1 = 2
-  expect_equal(splc_named["3->5"], 3 * 1, tolerance = 1e-9)  # fa[3]*b[5] = 3*1 = 3
-  expect_equal(splc_named["4->5"], 3 * 1, tolerance = 1e-9)  # fa[4]*b[5] = 3*1 = 3
+  expect_equal(splc_named[["1->2"]], 1 * 2, tolerance = 1e-9)  # fa[1]*b[2] = 1*2 = 2
+  expect_equal(splc_named[["2->3"]], 2 * 1, tolerance = 1e-9)  # fa[2]*b[3] = 2*1 = 2
+  expect_equal(splc_named[["2->4"]], 2 * 1, tolerance = 1e-9)  # fa[2]*b[4] = 2*1 = 2
+  expect_equal(splc_named[["3->5"]], 3 * 1, tolerance = 1e-9)  # fa[3]*b[5] = 3*1 = 3
+  expect_equal(splc_named[["4->5"]], 3 * 1, tolerance = 1e-9)  # fa[4]*b[5] = 3*1 = 3
 })
 
 
@@ -73,11 +74,11 @@ test_that("SPNP values are correct on simple DAG", {
   edge_names <- paste0(el[, 1], "->", el[, 2])
   spnp_named <- setNames(igraph::E(g)$SPNP, edge_names)
 
-  expect_equal(spnp_named["1->2"], 1 * 5, tolerance = 1e-9)  # fa[1]*ba[2] = 1*5 = 5
-  expect_equal(spnp_named["2->3"], 2 * 2, tolerance = 1e-9)  # fa[2]*ba[3] = 2*2 = 4
-  expect_equal(spnp_named["2->4"], 2 * 2, tolerance = 1e-9)  # fa[2]*ba[4] = 2*2 = 4
-  expect_equal(spnp_named["3->5"], 3 * 1, tolerance = 1e-9)  # fa[3]*ba[5] = 3*1 = 3
-  expect_equal(spnp_named["4->5"], 3 * 1, tolerance = 1e-9)  # fa[4]*ba[5] = 3*1 = 3
+  expect_equal(spnp_named[["1->2"]], 1 * 5, tolerance = 1e-9)  # fa[1]*ba[2] = 1*5 = 5
+  expect_equal(spnp_named[["2->3"]], 2 * 2, tolerance = 1e-9)  # fa[2]*ba[3] = 2*2 = 4
+  expect_equal(spnp_named[["2->4"]], 2 * 2, tolerance = 1e-9)  # fa[2]*ba[4] = 2*2 = 4
+  expect_equal(spnp_named[["3->5"]], 3 * 1, tolerance = 1e-9)  # fa[3]*ba[5] = 3*1 = 3
+  expect_equal(spnp_named[["4->5"]], 3 * 1, tolerance = 1e-9)  # fa[4]*ba[5] = 3*1 = 3
 })
 
 test_that("SPNP >= SPLC >= SPC for all edges", {

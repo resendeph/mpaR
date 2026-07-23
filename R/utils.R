@@ -69,47 +69,165 @@
 }
 
 
-#' @keywords internal
 #' Compute the forward/backward path-count vectors shared by
-#' [traversal_weights()], [edge_weights()], and [node_weights()].
+#' \code{traversal_weights()}, \code{edge_weights()}, and \code{node_weights()}.
 #'
 #' \code{f[v]}  = # paths from any global source to \code{v}.
-#' \code{fa[v]} = 1 + sum(fa[u] for u -> v); paths from any ancestor of
-#'   \code{v} (including \code{v} itself).
+#' \code{fa[v]} = 1 + sum of fa over predecessors of v; paths from any ancestor
+#'   of \code{v} (including \code{v} itself).
 #' \code{b[v]}  = # paths from \code{v} to any global sink.
-#' \code{ba[v]} = 1 + sum(ba[w] for v -> w); paths from \code{v} to any
+#' \code{ba[v]} = 1 + sum of ba over successors of v; paths from \code{v} to any
 #'   descendant (including \code{v} itself).
 #'
 #' @param g An \code{igraph} DAG (already validated by \code{.to_dag()}).
 #' @return A list with numeric vectors \code{f}, \code{fa}, \code{b}, \code{ba},
 #'   each indexed by vertex id.
+#' @keywords internal
 #' @noRd
 .path_counts <- function(g) {
-  n   <- igraph::vcount(g)
-  ord <- as.integer(.topo_order(g))
-  ss  <- .sources_sinks(g)
+  L      <- .dag_layers(g)
+  n      <- L$n
+  from_v <- L$from_v
+  to_v   <- L$to_v
 
-  f  <- numeric(n)
-  fa <- numeric(n)
-  f[ss$sources] <- 1.0
-
-  for (v in ord) {
-    preds <- as.integer(igraph::neighbors(g, v, mode = "in"))
-    fa[v] <- 1.0 + sum(fa[preds])
-    if (length(preds) == 0L) next
-    f[v]  <- sum(f[preds])
+  # Forward pass: f (paths from sources), fa (paths from ancestors incl. self)
+  f  <- numeric(n); fa <- numeric(n)
+  f[L$sources] <- 1.0; fa[L$sources] <- 1.0
+  for (lay in seq_len(L$maxlayer)) {
+    vs <- which(L$layer_of == lay)
+    es <- unlist(L$in_e[vs], use.names = FALSE)
+    if (length(es) == 0L) next
+    tv  <- to_v[es]; fv <- from_v[es]
+    ag  <- rowsum(cbind(f[fv], fa[fv]), group = tv, reorder = FALSE)
+    idx <- as.integer(rownames(ag))
+    f[idx]  <- ag[, 1L]
+    fa[idx] <- 1.0 + ag[, 2L]
   }
 
-  b  <- numeric(n)
-  ba <- numeric(n)
-  b[ss$sinks] <- 1.0
-
-  for (v in rev(ord)) {
-    succs <- as.integer(igraph::neighbors(g, v, mode = "out"))
-    ba[v] <- 1.0 + sum(ba[succs])
-    if (length(succs) == 0L) next
-    b[v]  <- sum(b[succs])
+  # Backward pass: b (paths to sinks), ba (paths to descendants incl. self)
+  b  <- numeric(n); ba <- numeric(n)
+  b[L$sinks] <- 1.0; ba[L$sinks] <- 1.0
+  if (L$maxlayer >= 1L) for (lay in (L$maxlayer - 1L):0L) {
+    vs <- which(L$layer_of == lay)
+    es <- unlist(L$out_e[vs], use.names = FALSE)
+    if (length(es) == 0L) next
+    fv  <- from_v[es]; tv <- to_v[es]
+    ag  <- rowsum(cbind(b[tv], ba[tv]), group = fv, reorder = FALSE)
+    idx <- as.integer(rownames(ag))
+    b[idx]  <- ag[, 1L]
+    ba[idx] <- 1.0 + ag[, 2L]
   }
 
   list(f = f, fa = fa, b = b, ba = ba)
+}
+
+
+#' Build the shared DAG structure used by all MPA routines.
+#'
+#' Constructs edge-id adjacency lists with base-R \code{split()} (one pass, no
+#' per-vertex igraph calls) and a longest-path topological layering (Kahn
+#' peeling): \code{layer_of[v]} is the length of the longest path from any
+#' source to \code{v}.  Because every arc goes from a strictly lower layer to a
+#' higher one, all vertices in a layer can be relaxed together, which lets the
+#' DP routines run one vectorised step per layer instead of one per vertex.
+#' @return list(n, m, from_v, to_v, in_e, out_e, sources, sinks, layer_of,
+#'   maxlayer)
+#' @keywords internal
+#' @noRd
+.dag_layers <- function(g) {
+  n  <- igraph::vcount(g)
+  m  <- igraph::ecount(g)
+  el <- igraph::as_edgelist(g, names = FALSE)
+  from_v <- as.integer(el[, 1L])
+  to_v   <- as.integer(el[, 2L])
+
+  out_e <- split(seq_len(m), factor(from_v, levels = seq_len(n)))
+  in_e  <- split(seq_len(m), factor(to_v,   levels = seq_len(n)))
+  indeg   <- tabulate(to_v,   nbins = n)
+  outdeg  <- tabulate(from_v, nbins = n)
+  sources <- which(indeg  == 0L)
+  sinks   <- which(outdeg == 0L)
+
+  layer_of  <- integer(n)
+  processed <- logical(n)
+  remaining <- indeg
+  q <- sources; processed[q] <- TRUE
+  cur <- 0L
+  repeat {
+    es <- unlist(out_e[q], use.names = FALSE)
+    if (length(es) == 0L) break
+    remaining <- remaining - tabulate(to_v[es], nbins = n)
+    nxt <- which(remaining == 0L & !processed)
+    if (length(nxt) == 0L) break
+    cur <- cur + 1L
+    layer_of[nxt]  <- cur
+    processed[nxt] <- TRUE
+    q <- nxt
+  }
+
+  list(n = n, m = m, from_v = from_v, to_v = to_v, in_e = in_e, out_e = out_e,
+       sources = sources, sinks = sinks, layer_of = layer_of, maxlayer = cur)
+}
+
+
+#' Forward and backward longest-path DP on a layered DAG.
+#'
+#' Returns best cumulative weights and predecessor-edge pointers in both
+#' directions.  Ties are broken toward the smallest edge id (stable sort), which
+#' reproduces the classic single-path trace.
+#' @return list(dp_fwd, pe_fwd, dp_bwd, pe_bwd)
+#' @keywords internal
+#' @noRd
+.longest_paths <- function(L, w) {
+  n <- L$n; from_v <- L$from_v; to_v <- L$to_v
+
+  dp_fwd <- rep(-Inf, n); pe_fwd <- integer(n); dp_fwd[L$sources] <- 0
+  for (lay in seq_len(L$maxlayer)) {
+    vs <- which(L$layer_of == lay)
+    es <- unlist(L$in_e[vs], use.names = FALSE)
+    if (length(es) == 0L) next
+    val <- dp_fwd[from_v[es]] + w[es]; tv <- to_v[es]
+    o   <- order(tv, -val); es <- es[o]; tv <- tv[o]; val <- val[o]
+    keep <- !duplicated(tv)
+    dp_fwd[tv[keep]] <- val[keep]; pe_fwd[tv[keep]] <- es[keep]
+  }
+
+  dp_bwd <- rep(-Inf, n); pe_bwd <- integer(n); dp_bwd[L$sinks] <- 0
+  if (L$maxlayer >= 1L) for (lay in (L$maxlayer - 1L):0L) {
+    vs <- which(L$layer_of == lay)
+    es <- unlist(L$out_e[vs], use.names = FALSE)
+    if (length(es) == 0L) next
+    val <- dp_bwd[to_v[es]] + w[es]; fv <- from_v[es]
+    o   <- order(fv, -val); es <- es[o]; fv <- fv[o]; val <- val[o]
+    keep <- !duplicated(fv)
+    dp_bwd[fv[keep]] <- val[keep]; pe_bwd[fv[keep]] <- es[keep]
+  }
+
+  list(dp_fwd = dp_fwd, pe_fwd = pe_fwd, dp_bwd = dp_bwd, pe_bwd = pe_bwd)
+}
+
+
+#' Trace v -> sink using backward predecessor edges (pe_bwd).
+#' @keywords internal
+#' @noRd
+.trace_fwd <- function(pe_bwd, v, to_v) {
+  edges <- integer(0)
+  repeat {
+    eid <- pe_bwd[v]
+    if (eid == 0L) break
+    edges <- c(edges, eid)
+    v <- to_v[eid]
+  }
+  edges
+}
+
+
+#' Version-safe edge-induced subgraph (igraph 2.1 renamed the function).
+#' @keywords internal
+#' @noRd
+.sub_edges <- function(g, eids) {
+  f <- tryCatch(getExportedValue("igraph", "subgraph_from_edges"),
+                error = function(e) NULL)
+  if (is.null(f)) f <- getExportedValue("igraph", "subgraph.edges")
+  f(g, eids, delete.vertices = TRUE)
 }

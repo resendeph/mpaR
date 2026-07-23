@@ -18,6 +18,7 @@ plot_mpa(
   edge_width_path = 3,
   edge_width_bg = 1,
   arrow_size = 0.4,
+  vertex_label_dist = 0,
   ...
 )
 }
@@ -61,6 +62,12 @@ Defaults to \code{0.7}.  Set to \code{0} to hide all labels.}
 
 \item{arrow_size}{Arrow size passed to \code{\link[igraph:plot.igraph]{igraph::plot.igraph()}}.
 Defaults to \code{0.4}.}
+
+\item{vertex_label_dist}{Distance between vertex centre and label, passed to
+\code{\link[igraph:plot.igraph]{igraph::plot.igraph()}} as \code{vertex.label.dist}.  Defaults to
+\code{0} (label centred inside the node).  Set to a positive value (e.g.
+\code{1.5}) to push labels outside the node circles, which is often more
+readable in dense graphs.}
 
 \item{...}{Additional arguments forwarded to \code{\link[igraph:plot.igraph]{igraph::plot.igraph()}}.
 Common uses: \code{main} for a plot title, \code{vertex.label} to supply
@@ -123,6 +130,18 @@ plot_mpa(g, mp, scope = "path",
 plot_mpa(g, mp, scope = "path",
          main         = "Global MPA — SPC",
          vertex.label = paste0("N", igraph::V(mp)$name))
+
+# Dense or large networks: shrink nodes and push labels outside the circles
+# so they remain readable. Pass the layout explicitly to avoid recomputing it.
+lay <- igraph::layout_with_sugiyama(g)$layout
+plot_mpa(g, mp,
+         scope             = "full",
+         layout            = lay,
+         vertex_size       = 5,
+         vertex_label_cex  = 0.8,
+         vertex_label_dist = 1.5,
+         path_label_col    = "red",
+         arrow_size        = 0.5)
 
 # Broadened path: threshold = 0.8 pulls in near-optimal routes
 mp_broad <- main_path(g, type = "global", weight = "SPC", threshold = 0.8)

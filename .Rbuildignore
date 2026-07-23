@@ -2,4 +2,6 @@
 ^cran-comments\.md$
 ^\.Rhistory$
 ^\.gitignore$
+^\.gitattributes$
 ^CRAN-SUBMISSION$
+^revdep$

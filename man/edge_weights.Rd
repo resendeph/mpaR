@@ -21,8 +21,7 @@ per requested weight (\code{SPC}, \code{SPLC}, \code{SPNP}).
 \description{
 Computes the SPC, SPLC, and/or SPNP traversal weights for every edge in a
 directed acyclic graph (via \code{\link[=traversal_weights]{traversal_weights()}}) and returns them as a
-tidy data frame, one row per edge — handy for inspecting or exporting the
-raw weights without working with \code{igraph} edge attributes directly.
+tidy data frame.
 }
 \examples{
 library(igraph)

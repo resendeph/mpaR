@@ -1,10 +1,9 @@
 #' Main Path Analysis
 #'
 #' @description
-#' A one-call convenience wrapper that coerces the input to an \code{igraph}
+#' A wrapper that coerces the input to an \code{igraph}
 #' DAG, computes the requested traversal weight, and extracts the main path(s).
-#' For finer control — e.g. pre-computing weights once and extracting several
-#' paths — use [traversal_weights()] and [main_path()] separately.
+#' For finer control use [traversal_weights()] and [main_path()] separately.
 #'
 #' @param x An \code{igraph} directed acyclic graph, or a data frame / matrix
 #'   whose first two columns are the edge list (\code{from}, \code{to}).

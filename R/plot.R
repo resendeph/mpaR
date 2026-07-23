@@ -42,6 +42,11 @@
 #' @param edge_width_bg Line width for background edges.  Defaults to \code{1}.
 #' @param arrow_size Arrow size passed to [igraph::plot.igraph()].
 #'   Defaults to \code{0.4}.
+#' @param vertex_label_dist Distance between vertex centre and label, passed to
+#'   [igraph::plot.igraph()] as \code{vertex.label.dist}.  Defaults to
+#'   \code{0} (label centred inside the node).  Set to a positive value (e.g.
+#'   \code{1.5}) to push labels outside the node circles, which is often more
+#'   readable in dense graphs.
 #' @param ... Additional arguments forwarded to [igraph::plot.igraph()].
 #'   Common uses: \code{main} for a plot title, \code{vertex.label} to supply
 #'   custom label strings (e.g. short names instead of node IDs).
@@ -87,6 +92,18 @@
 #'          main         = "Global MPA — SPC",
 #'          vertex.label = paste0("N", igraph::V(mp)$name))
 #'
+#' # Dense or large networks: shrink nodes and push labels outside the circles
+#' # so they remain readable. Pass the layout explicitly to avoid recomputing it.
+#' lay <- igraph::layout_with_sugiyama(g)$layout
+#' plot_mpa(g, mp,
+#'          scope             = "full",
+#'          layout            = lay,
+#'          vertex_size       = 5,
+#'          vertex_label_cex  = 0.8,
+#'          vertex_label_dist = 1.5,
+#'          path_label_col    = "red",
+#'          arrow_size        = 0.5)
+#'
 #' # Broadened path: threshold = 0.8 pulls in near-optimal routes
 #' mp_broad <- main_path(g, type = "global", weight = "SPC", threshold = 0.8)
 #' plot_mpa(g, mp_broad, scope = "path",
@@ -108,6 +125,7 @@ plot_mpa <- function(graph,
                      edge_width_path   = 3,
                      edge_width_bg     = 1,
                      arrow_size        = 0.4,
+                     vertex_label_dist = 0,
                      ...) {
 
   scope <- match.arg(scope)
@@ -117,6 +135,14 @@ plot_mpa <- function(graph,
   }
   if (!inherits(path, "igraph")) {
     rlang::abort("`path` must be an igraph object (output of main_path() or mpa()).")
+  }
+
+  # Auto-set vertex names if missing so labels always render correctly
+  if (is.null(igraph::V(graph)$name)) {
+    igraph::V(graph)$name <- as.character(seq_len(igraph::vcount(graph)))
+  }
+  if (is.null(igraph::V(path)$name)) {
+    igraph::V(path)$name <- as.character(seq_len(igraph::vcount(path)))
   }
 
   # ── Identify main-path vertices and edges in the full graph ────────────────
@@ -196,6 +222,7 @@ plot_mpa <- function(graph,
     edge.color         = e_color,
     edge.width         = e_width,
     edge.arrow.size    = arrow_size,
+    vertex.label.dist  = vertex_label_dist,
     ...
   )
 

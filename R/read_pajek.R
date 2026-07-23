@@ -123,35 +123,49 @@ read_pajek <- function(file,
 
   # ── Edge parsing helper ────────────────────────────────────────────────────
   # Returns data.frame(from, to, weight) from raw edge lines
+  # Vectorised: the whole block is parsed in one pass. The previous version
+  # built one data.frame per line and rbind()ed them, which is ~O(E^2) and
+  # takes minutes on large (100k+ arc) networks.
   .parse_edge_lines <- function(edge_lines, list_format = FALSE) {
-    rows <- vector("list", length(edge_lines))
-    for (i in seq_along(edge_lines)) {
-      tokens <- strsplit(trimws(edge_lines[i]), "\\s+")[[1L]]
-      tokens <- tokens[nchar(tokens) > 0L]
-      if (length(tokens) < 2L) next
-      from <- as.integer(tokens[1L])
-      if (list_format) {
-        # Arcslist / Edgeslist: first token = source, rest = targets, weight=1
-        targets <- as.integer(tokens[-1L])
-        rows[[i]] <- data.frame(
-          from   = from,
-          to     = targets,
-          weight = 1.0,
-          stringsAsFactors = FALSE
-        )
-      } else {
-        to     <- as.integer(tokens[2L])
-        weight <- if (length(tokens) >= 3L)
-                    suppressWarnings(as.numeric(tokens[3L]))
-                  else 1.0
-        if (is.na(weight)) weight <- 1.0
-        rows[[i]] <- data.frame(from = from, to = to, weight = weight,
-                                stringsAsFactors = FALSE)
+    empty <- data.frame(from = integer(0), to = integer(0), weight = numeric(0))
+    if (length(edge_lines) == 0L) return(empty)
+
+    if (!list_format) {
+      # Fast path: fixed 2 (from to) or 3 (from to weight) columns.
+      nums <- suppressWarnings(scan(text = edge_lines, what = numeric(),
+                                    quiet = TRUE))
+      k    <- length(nums) / length(edge_lines)
+      if (length(nums) > 0L && k == round(k) && k >= 2) {
+        mm     <- matrix(nums, ncol = k, byrow = TRUE)
+        weight <- if (k >= 3L) mm[, 3L] else rep(1.0, nrow(mm))
+        weight[is.na(weight)] <- 1.0
+        return(data.frame(from = as.integer(mm[, 1L]),
+                          to   = as.integer(mm[, 2L]),
+                          weight = weight, stringsAsFactors = FALSE))
       }
     }
-    rows <- rows[!vapply(rows, is.null, logical(1))]
-    if (length(rows) == 0L) return(data.frame(from=integer(0), to=integer(0), weight=numeric(0)))
-    do.call(rbind, rows)
+
+    # List format, or ragged edge lines: split once, expand vectorised.
+    tok   <- strsplit(trimws(edge_lines), "\\s+")
+    from1 <- suppressWarnings(as.integer(vapply(tok, `[`, "", 1L)))
+    if (list_format) {
+      targets <- lapply(tok, function(x) suppressWarnings(as.integer(x[-1L])))
+      len     <- lengths(targets)
+      keep    <- len > 0L & !is.na(from1)
+      if (!any(keep)) return(empty)
+      data.frame(from   = rep(from1[keep], len[keep]),
+                 to     = unlist(targets[keep], use.names = FALSE),
+                 weight = 1.0, stringsAsFactors = FALSE)
+    } else {
+      to1 <- suppressWarnings(as.integer(vapply(tok, `[`, "", 2L)))
+      w1  <- suppressWarnings(as.numeric(vapply(
+               tok, function(x) if (length(x) >= 3L) x[3L] else NA_character_, "")))
+      w1[is.na(w1)] <- 1.0
+      keep <- !is.na(from1) & !is.na(to1)
+      if (!any(keep)) return(empty)
+      data.frame(from = from1[keep], to = to1[keep], weight = w1[keep],
+                 stringsAsFactors = FALSE)
+    }
   }
 
   # ── Collect all edge sections ──────────────────────────────────────────────

@@ -3,8 +3,7 @@
 #' @description
 #' Computes the SPC, SPLC, and/or SPNP traversal weights for every edge in a
 #' directed acyclic graph (via [traversal_weights()]) and returns them as a
-#' tidy data frame, one row per edge — handy for inspecting or exporting the
-#' raw weights without working with `igraph` edge attributes directly.
+#' tidy data frame.
 #'
 #' @param x An \code{igraph} directed acyclic graph **or** a data frame /
 #'   matrix whose first two columns are the edge endpoints (\code{from},

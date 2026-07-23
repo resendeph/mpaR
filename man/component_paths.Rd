@@ -47,8 +47,8 @@ connected components, runs \code{\link[=traversal_weights]{traversal_weights()}}
 one independently, and returns the combined result.
 
 Components smaller than \code{min_size} vertices are silently dropped,
-keeping only technologically significant sub-networks. Inspired by the
-key-route component-selection strategy of Liu et al. (2019).
+keeping only technologically significant sub-networks, similarly to the
+key-route selection strategy of Liu et al. (2019).
 }
 \examples{
 library(igraph)

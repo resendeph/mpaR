@@ -52,6 +52,14 @@
 #' @param threshold Numeric in \code{(0, 1]}.  \code{1.0} (default) gives the
 #'   classic algorithm.  Values below \code{1.0} broaden the path by including
 #'   near-optimal edges — see the **Broadening** section above.
+#' @param k_range Optional integer vector \code{c(start, end)}; only used when
+#'   \code{type = "key_route"}.  Seeds from the key routes ranked \code{start}
+#'   to \code{end} by weight, instead of the top \code{k}.  This mirrors Pajek's
+#'   ability to compute a slice of key routes (e.g. \code{c(5, 25)}), which is
+#'   useful for isolating the contribution of mid-tier routes or excluding the
+#'   dominant trunk.  Note that a slice which omits the top routes is a
+#'   decomposition tool, not the canonical cumulative main path.  When supplied,
+#'   \code{k_range} takes precedence over \code{k}.
 #'
 #' @return An \code{igraph} subgraph containing only the vertices and edges
 #'   that belong to the main path(s).  The subgraph retains the vertex
@@ -121,7 +129,8 @@
 #'
 #' @export
 main_path <- function(g, type = c("global", "local", "key_route"),
-                      weight = NULL, k = 1L, threshold = 1.0) {
+                      weight = NULL, k = 1L, threshold = 1.0,
+                      k_range = NULL) {
   if (!inherits(g, "igraph")) {
     rlang::abort("`g` must be an igraph object.  Run traversal_weights() first.")
   }
@@ -141,10 +150,10 @@ main_path <- function(g, type = c("global", "local", "key_route"),
     type,
     global    = .global_main_path(g, w, threshold),
     local     = .local_main_path(g, w, threshold),
-    key_route = .key_route_main_path(g, w, k, threshold)
+    key_route = .key_route_main_path(g, w, k, threshold, k_range)
   )
 
-  igraph::subgraph.edges(g, eids = edge_ids, delete.vertices = TRUE)
+  .sub_edges(g, edge_ids)
 }
 
 
@@ -181,43 +190,38 @@ main_path <- function(g, type = c("global", "local", "key_route"),
 #' edges with weight >= threshold * max_outgoing_weight.
 #' @noRd
 .local_main_path <- function(g, w, threshold = 1.0) {
-  ss     <- .sources_sinks(g)
-  el     <- igraph::as_edgelist(g, names = FALSE)
-  to_v   <- el[, 2L]
+  L      <- .dag_layers(g)
+  from_v <- L$from_v; to_v <- L$to_v; n <- L$n
 
-  edge_set  <- integer(0)
-  visited_v <- logical(igraph::vcount(g))
+  # local maximum outgoing weight per source vertex (vectorised)
+  maxout <- rep(-Inf, n)
+  mo     <- tapply(w, from_v, max)
+  maxout[as.integer(names(mo))] <- as.numeric(mo)
 
-  queue <- ss$sources
-  while (length(queue) > 0L) {
-    v     <- queue[[1L]]
-    queue <- queue[-1L]
-    if (visited_v[v]) next
-    visited_v[v] <- TRUE
-
-    out_e <- as.integer(igraph::incident(g, v, mode = "out"))
-    if (length(out_e) == 0L) next   # sink
-
-    max_w  <- max(w[out_e])
-    cutoff <- threshold * max_w
-    keep_e <- out_e[w[out_e] >= cutoff - 1e-10]
-
-    edge_set <- union(edge_set, keep_e)
-    queue    <- c(queue, to_v[keep_e])
+  active  <- logical(n); active[L$sources] <- TRUE
+  edge_in <- logical(length(w))
+  # visit vertices in layered (topological) order so each node is decided
+  # before any of its successors
+  for (v in order(L$layer_of)) {
+    if (!active[v]) next
+    oe <- L$out_e[[v]]
+    if (length(oe) == 0L) next   # sink
+    keep <- oe[w[oe] >= threshold * maxout[v] - 1e-10]
+    edge_in[keep] <- TRUE
+    active[to_v[keep]] <- TRUE
   }
-
-  edge_set
+  which(edge_in)
 }
 
 
 
 #' Proper backward trace that also tracks the vertex.
-#' prev_e: integer vector, prev_e[v] = edge id leading to v (0 = source)
-#' from_v: integer vector mapping edge id -> from vertex
+#' `prev_e`: integer vector, `prev_e[v]` = edge id leading to `v` (0 = source).
+#' `from_v`: integer vector mapping edge id to its from-vertex.
 #' @noRd
 .trace_path <- function(prev_e, v, from_v = NULL) {
   if (is.null(from_v)) {
-    # Reconstruct from_v is unavailable — caller must supply it.
+    # Reconstruct from_v is unavailable - caller must supply it.
     # This overload is called with from_v supplied; see below.
     return(integer(0))
   }
@@ -232,125 +236,140 @@ main_path <- function(g, type = c("global", "local", "key_route"),
 }
 
 
-# Re-define .global_main_path with from_v available in scope and threshold support
 .global_main_path <- function(g, w, threshold = 1.0) {
-  n   <- igraph::vcount(g)
-  ord <- as.integer(.topo_order(g))
-  ss  <- .sources_sinks(g)
+  L  <- .dag_layers(g)
+  lp <- .longest_paths(L, w)
 
-  el     <- igraph::as_edgelist(g, names = FALSE)
-  from_v <- el[, 1L]
-  to_v   <- el[, 2L]
+  best_sink <- L$sinks[which.max(lp$dp_fwd[L$sinks])]
 
-  # Forward DP: dp_fwd[v] = best cumulative weight to reach v from any source
-  dp_fwd <- rep(-Inf, n)
-  prev_e <- integer(n)
-  dp_fwd[ss$sources] <- 0.0
-
-  for (v in ord) {
-    in_e <- as.integer(igraph::incident(g, v, mode = "in"))
-    if (length(in_e) == 0L) next
-    for (eid in in_e) {
-      cand <- dp_fwd[from_v[eid]] + w[eid]
-      if (cand > dp_fwd[v]) {
-        dp_fwd[v] <- cand
-        prev_e[v] <- eid
-      }
-    }
-  }
-
-  best_sink <- ss$sinks[which.max(dp_fwd[ss$sinks])]
-  best_dp   <- dp_fwd[best_sink]
-
-  # threshold == 1: classic single-path trace
+  # threshold == 1: classic single best source-to-sink path
   if (threshold >= 1.0) {
-    return(.trace_path(prev_e, best_sink, from_v))
+    return(.trace_path(lp$pe_fwd, best_sink, L$from_v))
   }
 
-  # threshold < 1: include all edges on near-optimal paths
-  # Backward DP: dp_bwd[v] = best cumulative weight from v to any sink
-  dp_bwd <- rep(-Inf, n)
-  dp_bwd[ss$sinks] <- 0.0
-
-  for (v in rev(ord)) {
-    out_e <- as.integer(igraph::incident(g, v, mode = "out"))
-    if (length(out_e) == 0L) next
-    for (eid in out_e) {
-      cand <- dp_bwd[to_v[eid]] + w[eid]
-      if (cand > dp_bwd[v]) dp_bwd[v] <- cand
-    }
-  }
-
-  # An edge (u->v, w[e]) is included if the best path through it is at least
-  # threshold * best_dp.  Edges unreachable from any source or leading nowhere
-  # have dp_fwd[u] or dp_bwd[v] == -Inf and are excluded automatically.
-  cutoff   <- threshold * best_dp
-  edge_set <- which(dp_fwd[from_v] + w + dp_bwd[to_v] >= cutoff - 1e-10)
-  as.integer(edge_set)
+  # threshold < 1: include every edge on a path within threshold * optimal.
+  # An edge (u->v) qualifies if dp_fwd[u] + w + dp_bwd[v] >= threshold * best.
+  # Unreachable edges carry -Inf on one side and drop out automatically.
+  best    <- lp$dp_fwd[best_sink]
+  through <- lp$dp_fwd[L$from_v] + w + lp$dp_bwd[L$to_v]
+  as.integer(which(through >= threshold * best - 1e-10))
 }
 
 
-.key_route_main_path <- function(g, w, k, threshold = 1.0) {
-  k <- max(1L, as.integer(k))
-  el     <- igraph::as_edgelist(g, names = FALSE)
-  from_v <- el[, 1L]
-  to_v   <- el[, 2L]
-  ss     <- .sources_sinks(g)
-  ord    <- as.integer(.topo_order(g))
-  n      <- igraph::vcount(g)
+.key_route_main_path <- function(g, w, k = 1L, threshold = 1.0, k_range = NULL) {
+  L  <- .dag_layers(g)
+  lp <- .longest_paths(L, w)
+  from_v <- L$from_v; to_v <- L$to_v
+  m   <- length(w)
+  ord <- order(w, decreasing = TRUE)   # arcs from most to least important
 
-  # Forward DP -----------------------------------------------------------------
-  dp_fwd <- rep(-Inf, n); pe_fwd <- integer(n)
-  dp_fwd[ss$sources] <- 0.0
+  # Seed selection --------------------------------------------------------------
+  #  * k_range = c(start, end): the key routes ranked start..end by weight
+  #    (Pajek-style slice; a decomposition tool, not the cumulative main path).
+  #  * otherwise top-k: all arcs with weight >= threshold * (k-th largest),
+  #    so exact ties at the boundary are included.
+  if (!is.null(k_range)) {
+    r     <- as.integer(k_range)
+    start <- max(1L, min(r)); end <- min(m, max(r))
+    seeds <- ord[start:end]
+  } else {
+    k     <- max(1L, as.integer(k))
+    kth_w <- w[ord[min(k, m)]]
+    seeds <- which(w >= threshold * kth_w - 1e-10)
+  }
 
-  for (v in ord) {
-    in_e <- as.integer(igraph::incident(g, v, mode = "in"))
-    if (length(in_e) == 0L) next
-    for (eid in in_e) {
-      cand <- dp_fwd[from_v[eid]] + w[eid]
-      if (cand > dp_fwd[v]) { dp_fwd[v] <- cand; pe_fwd[v] <- eid }
+  # Extend each seed edge back to a source and forward to a sink.
+  edge_in <- logical(m)
+  for (e in seeds) {
+    edge_in[.trace_path(lp$pe_fwd, from_v[e], from_v)] <- TRUE
+    edge_in[e] <- TRUE
+    edge_in[.trace_fwd(lp$pe_bwd, to_v[e], to_v)] <- TRUE
+  }
+  which(edge_in)
+}
+
+
+#' Sweep the key-route main path over multiple k values in one pass
+#'
+#' @description
+#' Computes the key-route main path for several values of \code{k} while sharing
+#' a single forward/backward dynamic-programming pass.  The DP does not depend on
+#' \code{k}, so this is dramatically faster than calling [main_path()] in a loop
+#' when exploring how the path grows with \code{k} — the standard way to choose
+#' \code{k} is to look for a plateau in the number of nodes and arcs as \code{k}
+#' increases.
+#'
+#' @param g An \code{igraph} DAG carrying a traversal weight (see
+#'   [traversal_weights()]).
+#' @param weight Character; which weight attribute to use.  Defaults to the
+#'   first of \code{SPC}, \code{SPLC}, \code{SPNP} present on \code{g}.
+#' @param k_values Integer vector of \code{k} values to evaluate.
+#' @param threshold Numeric in \code{(0, 1]}; broadens the seed set exactly as
+#'   in [main_path()].
+#' @param return_graphs Logical; if \code{TRUE}, the key-route subgraph for each
+#'   \code{k} is attached as \code{attr(result, "graphs")} (a list aligned to
+#'   the rows of the returned data frame).
+#'
+#' @return A data frame with columns \code{k}, \code{n_nodes}, \code{n_arcs}.
+#'   For each \code{k}, these match \code{main_path(type = "key_route", k = k)}.
+#'
+#' @seealso [main_path()]
+#'
+#' @examples
+#' library(igraph)
+#' el <- data.frame(from = c(1,1,2,3,2,4), to = c(2,3,4,4,5,5))
+#' g  <- traversal_weights(el, method = "SPC")
+#' key_route_sweep(g, weight = "SPC", k_values = c(1, 2, 3))
+#'
+#' @export
+key_route_sweep <- function(g, weight = NULL,
+                            k_values = c(1, 10, 20, 30, 40, 50),
+                            threshold = 1.0, return_graphs = FALSE) {
+  if (!inherits(g, "igraph")) {
+    rlang::abort("`g` must be an igraph object.  Run traversal_weights() first.")
+  }
+  weight <- .resolve_weight(g, weight)
+  w      <- igraph::edge_attr(g, weight)
+  m      <- length(w)
+
+  L  <- .dag_layers(g)
+  lp <- .longest_paths(L, w)
+  from_v <- L$from_v; to_v <- L$to_v
+
+  ord         <- order(w, decreasing = TRUE)
+  sorted_wval <- w[ord]
+  k_values    <- sort(unique(as.integer(k_values)))
+
+  edge_in <- logical(m)
+  n_nodes <- integer(length(k_values))
+  n_arcs  <- integer(length(k_values))
+  graphs  <- vector("list", length(k_values))
+
+  # memoise source/sink traces so each seed's chain is walked at most once
+  cb <- new.env(hash = TRUE, parent = emptyenv())
+  cf <- new.env(hash = TRUE, parent = emptyenv())
+  tb <- function(u) { key <- as.character(u); v <- cb[[key]]
+                      if (is.null(v)) { v <- .trace_path(lp$pe_fwd, u, from_v); cb[[key]] <- v }; v }
+  tf <- function(u) { key <- as.character(u); v <- cf[[key]]
+                      if (is.null(v)) { v <- .trace_fwd(lp$pe_bwd, u, to_v); cf[[key]] <- v }; v }
+
+  pos <- 0L                              # seed edges added so far (monotone in k)
+  for (i in seq_along(k_values)) {
+    k  <- k_values[i]
+    bw <- sorted_wval[min(k, m)]         # k-th largest weight (threshold boundary)
+    target <- sum(sorted_wval >= threshold * bw - 1e-10)
+    while (pos < target) {
+      pos <- pos + 1L
+      e <- ord[pos]
+      edge_in[c(tb(from_v[e]), e, tf(to_v[e]))] <- TRUE
     }
+    inc_e      <- which(edge_in)
+    n_arcs[i]  <- length(inc_e)
+    n_nodes[i] <- length(unique(c(from_v[inc_e], to_v[inc_e])))
+    if (return_graphs) graphs[[i]] <- .sub_edges(g, inc_e)
   }
 
-  # Backward DP ----------------------------------------------------------------
-  dp_bwd <- rep(-Inf, n); pe_bwd <- integer(n)
-  dp_bwd[ss$sinks] <- 0.0
-
-  for (v in rev(ord)) {
-    out_e <- as.integer(igraph::incident(g, v, mode = "out"))
-    if (length(out_e) == 0L) next
-    for (eid in out_e) {
-      cand <- dp_bwd[to_v[eid]] + w[eid]
-      if (cand > dp_bwd[v]) { dp_bwd[v] <- cand; pe_bwd[v] <- eid }
-    }
-  }
-
-  # Helper: forward trace (v -> sink) using pe_bwd
-  trace_fwd <- function(v) {
-    edges <- integer(0)
-    repeat {
-      eid <- pe_bwd[v]
-      if (eid == 0L) break
-      edges <- c(edges, eid)
-      v <- to_v[eid]
-    }
-    edges
-  }
-
-  # Seed edges: top-k by weight; threshold expands this to all edges within
-  # threshold * w[k-th] — lets the user cast a wider net without increasing k.
-  sorted_w <- sort(w, decreasing = TRUE)
-  kth_w    <- sorted_w[min(k, length(w))]
-  top_k    <- which(w >= threshold * kth_w - 1e-10)
-
-  edge_set <- integer(0)
-  for (seed_e in top_k) {
-    u <- from_v[seed_e]
-    v <- to_v[seed_e]
-    edge_set <- union(edge_set, .trace_path(pe_fwd, u, from_v))
-    edge_set <- union(edge_set, seed_e)
-    edge_set <- union(edge_set, trace_fwd(v))
-  }
-
-  edge_set
+  res <- data.frame(k = k_values, n_nodes = n_nodes, n_arcs = n_arcs)
+  if (return_graphs) attr(res, "graphs") <- graphs
+  res
 }

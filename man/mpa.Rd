@@ -34,10 +34,9 @@ An \code{igraph} subgraph of the main path(s), carrying the chosen
 traversal weight as an edge attribute.
 }
 \description{
-A one-call convenience wrapper that coerces the input to an \code{igraph}
+A wrapper that coerces the input to an \code{igraph}
 DAG, computes the requested traversal weight, and extracts the main path(s).
-For finer control — e.g. pre-computing weights once and extracting several
-paths — use \code{\link[=traversal_weights]{traversal_weights()}} and \code{\link[=main_path]{main_path()}} separately.
+For finer control use \code{\link[=traversal_weights]{traversal_weights()}} and \code{\link[=main_path]{main_path()}} separately.
 }
 \examples{
 library(igraph)

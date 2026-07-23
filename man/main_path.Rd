@@ -9,7 +9,8 @@ main_path(
   type = c("global", "local", "key_route"),
   weight = NULL,
   k = 1L,
-  threshold = 1
+  threshold = 1,
+  k_range = NULL
 )
 }
 \arguments{
@@ -30,6 +31,15 @@ Defaults to the first of \code{SPC}, \code{SPLC}, \code{SPNP} found on
 \item{threshold}{Numeric in \code{(0, 1]}.  \code{1.0} (default) gives the
 classic algorithm.  Values below \code{1.0} broaden the path by including
 near-optimal edges — see the \strong{Broadening} section above.}
+
+\item{k_range}{Optional integer vector \code{c(start, end)}; only used when
+\code{type = "key_route"}.  Seeds from the key routes ranked \code{start}
+to \code{end} by weight, instead of the top \code{k}.  This mirrors Pajek's
+ability to compute a slice of key routes (e.g. \code{c(5, 25)}), which is
+useful for isolating the contribution of mid-tier routes or excluding the
+dominant trunk.  Note that a slice which omits the top routes is a
+decomposition tool, not the canonical cumulative main path.  When supplied,
+\code{k_range} takes precedence over \code{k}.}
 }
 \value{
 An \code{igraph} subgraph containing only the vertices and edges

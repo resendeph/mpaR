@@ -1,0 +1,10 @@
+# Normalise line endings to LF in the repository (keeps diffs clean and matches
+# the existing history). Windows editors that save CRLF will be normalised on
+# commit via `git add --renormalize .`.
+* text=auto eol=lf
+*.R    text eol=lf
+*.Rd   text eol=lf
+*.md   text eol=lf
+*.net  text eol=lf
+DESCRIPTION text eol=lf
+NAMESPACE   text eol=lf
